@@ -183,12 +183,14 @@ class GameLauncherApp:
         # Bind the mouse wheel to the canvas for scrolling
         games_window.bind("<MouseWheel>", lambda event, canvas=canvas: self.on_mouse_wheel(event, canvas))
 
+
     def on_mouse_wheel(self, event, canvas):
         """Handle mouse wheel scrolling"""
         if event.delta > 0:
             canvas.yview_scroll(-1, "units")  # Scroll up
         else:
             canvas.yview_scroll(1, "units")  # Scroll down
+
 
     def launch_game(self, game_path):
         """Launch the game based on its path"""
@@ -203,6 +205,8 @@ class GameLauncherApp:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to launch game: {e}")
             print(f"Error launching game: {e}")  # Debugging
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()
