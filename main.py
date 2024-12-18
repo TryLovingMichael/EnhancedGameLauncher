@@ -1,12 +1,13 @@
 import os
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 
 class GameLauncherApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Game Launcher")
         self.root.geometry("800x600")
+        self.root.config(bg="#f0f0f0")  # Light background for the root window
         self.games = {}  # Store games by company
         self.buttons = {}  # Store buttons for each company
         self.filtered_words = []  # Initialize filtered words here
@@ -42,9 +43,9 @@ class GameLauncherApp:
         return games
 
     def create_company_button(self, company):
-        """Create a button for each company"""
-        button = tk.Button(self.root, text=company, command=lambda c=company: self.show_games(c))
-        button.pack(pady=10)
+        """Create a button for each company with styling"""
+        button = ttk.Button(self.root, text=company, style="Company.TButton", command=lambda c=company: self.show_games(c))
+        button.pack(pady=10, fill="x", padx=50)
         self.buttons[company] = button
 
     def show_games(self, company):
@@ -55,20 +56,21 @@ class GameLauncherApp:
 
         games_window = tk.Toplevel(self.root)
         games_window.title(f"{company} Games")
+        games_window.geometry("600x400")
 
         # Create a canvas to make the games window scrollable
         canvas = tk.Canvas(games_window)
-        scrollbar = tk.Scrollbar(games_window, orient="vertical", command=canvas.yview)
+        scrollbar = ttk.Scrollbar(games_window, orient="vertical", command=canvas.yview)
         canvas.configure(yscrollcommand=scrollbar.set)
 
         # Frame to hold the game buttons
-        buttons_frame = tk.Frame(canvas)
+        buttons_frame = ttk.Frame(canvas)
 
         # Add the buttons for each game in the company
         games_list = self.games[company]
         for game in games_list:
-            game_button = tk.Button(buttons_frame, text=game, command=lambda g=game: self.launch_game(g))
-            game_button.pack(pady=5)
+            game_button = ttk.Button(buttons_frame, text=game, style="Game.TButton", command=lambda g=game: self.launch_game(g))
+            game_button.pack(pady=5, fill="x", padx=20)
 
         # Add the scrollbar to the canvas and display the frame inside the canvas
         scrollbar.pack(side="right", fill="y")
@@ -78,6 +80,16 @@ class GameLauncherApp:
         # Update the scrollable region
         buttons_frame.update_idletasks()
         canvas.config(scrollregion=canvas.bbox("all"))
+
+        # Bind the mouse wheel to the canvas for scrolling
+        games_window.bind("<MouseWheel>", lambda event, canvas=canvas: self.on_mouse_wheel(event, canvas))
+
+    def on_mouse_wheel(self, event, canvas):
+        """Handle mouse wheel scrolling"""
+        if event.delta > 0:
+            canvas.yview_scroll(-1, "units")  # Scroll up
+        else:
+            canvas.yview_scroll(1, "units")  # Scroll down
 
     def launch_game(self, game_name):
         """Launch the game based on its name (filtered name without path)"""
@@ -117,7 +129,14 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = GameLauncherApp(root)
 
-    # Example: Add filters to exclude certain games (e.g., games containing "ndp")
+    # Add filters to exclude certain games (e.g., games containing "ndp")
     app.add_filter("ndp")
+
+    # Configure the style for buttons
+    style = ttk.Style()
+    style.configure("Company.TButton", font=("Arial", 14), padding=10, relief="flat", background="#4CAF50", foreground="white")
+    style.configure("Game.TButton", font=("Arial", 12), padding=8, relief="flat", background="#2196F3", foreground="white")
+    style.map("Company.TButton", background=[('active', '#45a049')], foreground=[('active', 'black')])
+    style.map("Game.TButton", background=[('active', '#1E88E5')], foreground=[('active', 'black')])
 
     root.mainloop()
