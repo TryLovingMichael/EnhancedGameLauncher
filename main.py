@@ -10,7 +10,14 @@ class GameLauncherApp:
         self.root.config(bg="#f0f0f0")  # Light background for the root window
         self.games = {}  # Store games by company
         self.buttons = {}  # Store buttons for each company
-        self.filtered_words = []  # Initialize filtered words here
+        self.filtered_words = ['ndp', 'test', 'sql', 'uac', 'crashreport', 'ue4', 'eac', 'ue5', 
+                               'unitycrash', 'easyanti', 'helper', 'ffmpeg', 'yt-dlp', 
+                               'jab', 'jaccess', 'java' 'jfr', 'jrun', 'keytool', 'kinit', 'klist',
+                               'ktab', 'rmi', 'rmiregistry', 'window3d', 'compiler', 'atg', 'dotNet',
+                               'oalinst', 'vcredist', 'vc_redist', 'VC_redist', 'openssl', 'installer',
+                               'launcher', 'diagnostic', 'apputil', 'microsoft', 'winr', 'ui32', 'ui64',
+                               'steamredown', 'wallpaperservice', 'webwallpaper', 'applicationwallpaperinject',
+                               'edgewallpaper', 'server', 'dx', 'steam', 'java', 'javaw', 'javaw', 'jfr']  # Hardcoded filter list
 
         self.load_games()
 
@@ -39,8 +46,16 @@ class GameLauncherApp:
                     if file.endswith(".exe"):  # Find all .exe files
                         game_name = file[:-4]  # Remove the .exe extension
                         if not self.is_filtered(game_name):  # Check if the game is filtered
-                            games.append(game_name)  # Add the game name
+                            games.append(os.path.join(root, file))  # Store the full path
         return games
+
+    def is_filtered(self, game_name):
+        """Check if the game name contains any of the filtered words"""
+        for word in self.filtered_words:
+            if word.lower() in game_name.lower():  # Case-insensitive matching
+                print(f"Filtering out '{game_name}' because it contains '{word}'")  # Debugging
+                return True
+        return False
 
     def create_company_button(self, company):
         """Create a button for each company with styling"""
@@ -69,7 +84,7 @@ class GameLauncherApp:
         # Add the buttons for each game in the company
         games_list = self.games[company]
         for game in games_list:
-            game_button = ttk.Button(buttons_frame, text=game, style="Game.TButton", command=lambda g=game: self.launch_game(g))
+            game_button = ttk.Button(buttons_frame, text=os.path.basename(game)[:-4], style="Game.TButton", command=lambda g=game: self.launch_game(g, company))
             game_button.pack(pady=5, fill="x", padx=20)
 
         # Add the scrollbar to the canvas and display the frame inside the canvas
@@ -91,18 +106,19 @@ class GameLauncherApp:
         else:
             canvas.yview_scroll(1, "units")  # Scroll down
 
-    def launch_game(self, game_name):
-        """Launch the game based on its name (filtered name without path)"""
-        # Find the full path of the game from the name
-        for company, games_list in self.games.items():
-            for game in games_list:
-                if game == game_name:  # Match the game name
-                    game_path = os.path.join(self.get_directory_by_company(company), game_name + ".exe")
-                    try:
-                        os.startfile(game_path)  # Launch the game
-                    except Exception as e:
-                        messagebox.showerror("Error", f"Failed to launch game: {e}")
-                    return
+    def launch_game(self, game_path, company):
+        """Launch the game based on its path"""
+        try:
+            print(f"Attempting to launch: {game_path}")  # Debugging
+
+            if os.path.exists(game_path):
+                os.startfile(game_path)  # Launch the game
+                print(f"Launching game: {game_path}")  # Debugging
+            else:
+                raise FileNotFoundError(f"Game not found: {game_path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to launch game: {e}")
+            print(f"Error launching game: {e}")  # Debugging
 
     def get_directory_by_company(self, company):
         """Return the directory path for the given company"""
@@ -114,23 +130,11 @@ class GameLauncherApp:
         }
         return directories.get(company, "")
 
-    def is_filtered(self, game_name):
-        """Check if the game name contains any of the filtered words"""
-        for word in self.filtered_words:
-            if word.lower() in game_name.lower():  # Case-insensitive matching
-                return True
-        return False
-
-    def add_filter(self, filter_word):
-        """Add a word to the filter list"""
-        self.filtered_words.append(filter_word.lower())  # Store the filter word in lowercase
-
 if __name__ == "__main__":
     root = tk.Tk()
     app = GameLauncherApp(root)
 
-    # Add filters to exclude certain games (e.g., games containing "ndp")
-    app.add_filter("ndp")
+    # Hardcoded filter list is already defined in the class itself
 
     # Configure the style for buttons
     style = ttk.Style()
