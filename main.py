@@ -12,13 +12,14 @@ class GameLauncherApp:
         self.buttons = {}  # Store buttons for each company
         self.filtered_words = ['ndp', 'test', 'sql', 'uac', 'crashreport', 'ue4', 'eac', 'ue5', 
                                'unitycrash', 'easyanti', 'helper', 'ffmpeg', 'yt-dlp', 
-                               'jab', 'jaccess', 'java' 'jfr', 'jrun', 'keytool', 'kinit', 'klist',
+                               'jab', 'jaccess', 'java', 'jfr', 'jrun', 'keytool', 'kinit', 'klist',
                                'ktab', 'rmi', 'rmiregistry', 'window3d', 'compiler', 'atg', 'dotNet',
                                'oalinst', 'vcredist', 'vc_redist', 'VC_redist', 'openssl', 'installer',
                                'launcher', 'diagnostic', 'apputil', 'microsoft', 'winr', 'ui32', 'ui64',
                                'steamredown', 'wallpaperservice', 'webwallpaper', 'applicationwallpaperinject',
                                'edgewallpaper', 'server', 'dx', 'steam', 'java', 'javaw', 'javaw', 'jfr']  # Hardcoded filter list
-
+        self.search_var = tk.StringVar()  # Store the search query
+        self.games_buttons_frame = None  # Frame to hold the search result buttons
         self.load_games()
 
     def load_games(self):
@@ -36,6 +37,62 @@ class GameLauncherApp:
             self.create_company_button(company, directory)  # Create button regardless of directory existence
             if games_list:
                 self.games[company] = games_list
+                print(f"Loaded games for {company}: {games_list}")  # Debugging to ensure games are loaded
+
+        # Create the search bar and search button
+        self.create_search_bar()
+
+    def create_search_bar(self):
+        """Create a search bar for filtering games"""
+        search_frame = ttk.Frame(self.root)
+        search_frame.pack(pady=10, fill="x", padx=50)
+
+        search_entry = ttk.Entry(search_frame, textvariable=self.search_var, font=("Arial", 12))
+        search_entry.pack(side="left", fill="x", expand=True)
+
+        search_button = ttk.Button(search_frame, text="Search", command=self.filter_games)
+        search_button.pack(side="right", padx=10)
+
+        # Bind the search variable to filter the games whenever the text changes
+        self.search_var.trace("w", lambda *args: self.filter_games())
+
+    def filter_games(self):
+        """Filter the games based on the search query"""
+        search_query = self.search_var.get().lower()  # Convert search query to lowercase for case-insensitive matching
+        print(f"Filtering games with query: {search_query}")  # Debugging to check what is entered
+
+        # Create a new frame for the search results if it's not already created
+        if self.games_buttons_frame is None:
+            self.games_buttons_frame = ttk.Frame(self.root)
+            self.games_buttons_frame.pack(pady=10, fill="x", padx=50)
+
+        # If query is empty, just show all games again
+        if not search_query:
+            self.clear_search_results()  # Clear any previous search results
+            return
+
+        found_games = False  # Track if we find any games matching the query
+
+        # Add buttons for each game that matches the search query
+        for company, games_list in self.games.items():
+            for game in games_list:
+                game_name = os.path.basename(game)[:-4]  # Remove the .exe extension
+                if search_query in game_name.lower():  # Case-insensitive matching
+                    found_games = True
+                    game_button = ttk.Button(self.games_buttons_frame, text=game_name, style="Game.TButton", command=lambda g=game: self.launch_game(g))
+                    game_button.pack(pady=5, fill="x", padx=20)
+                    print(f"Game found: {game_name}")  # Debugging to check if game matches the search query
+
+        # If no games are found, show a message
+        if not found_games:
+            no_results_label = ttk.Label(self.games_buttons_frame, text="No games found", font=("Arial", 12))
+            no_results_label.pack(pady=10)
+
+    def clear_search_results(self):
+        """Clear all search results from the screen"""
+        if self.games_buttons_frame:
+            for widget in self.games_buttons_frame.winfo_children():
+                widget.destroy()  # Remove previous search results
 
     def find_games(self, directory):
         """Search for .exe files in the specified directory and return game names without .exe"""
@@ -53,7 +110,6 @@ class GameLauncherApp:
         """Check if the game name contains any of the filtered words"""
         for word in self.filtered_words:
             if word.lower() in game_name.lower():  # Case-insensitive matching
-                print(f"Filtering out '{game_name}' because it contains '{word}'")  # Debugging
                 return True
         return False
 
@@ -112,7 +168,7 @@ class GameLauncherApp:
         # Add the buttons for each game in the company
         games_list = self.games[company]
         for game in games_list:
-            game_button = ttk.Button(buttons_frame, text=os.path.basename(game)[:-4], style="Game.TButton", command=lambda g=game: self.launch_game(g, company))
+            game_button = ttk.Button(buttons_frame, text=os.path.basename(game)[:-4], style="Game.TButton", command=lambda g=game: self.launch_game(g))
             game_button.pack(pady=5, fill="x", padx=20)
 
         # Add the scrollbar to the canvas and display the frame inside the canvas
@@ -134,7 +190,7 @@ class GameLauncherApp:
         else:
             canvas.yview_scroll(1, "units")  # Scroll down
 
-    def launch_game(self, game_path, company):
+    def launch_game(self, game_path):
         """Launch the game based on its path"""
         try:
             print(f"Attempting to launch: {game_path}")  # Debugging
@@ -148,21 +204,9 @@ class GameLauncherApp:
             messagebox.showerror("Error", f"Failed to launch game: {e}")
             print(f"Error launching game: {e}")  # Debugging
 
-    def get_directory_by_company(self, company):
-        """Return the directory path for the given company"""
-        directories = {
-            'Steam': r'C:\Program Files (x86)\Steam\steamapps\common',
-            'Epic Games': r'C:\Program Files\Epic Games',
-            'GOG': r'C:\Program Files (x86)\GOG Galaxy\Games',
-            'Ubisoft': r'C:\Program Files (x86)\Ubisoft\Ubisoft Game Launcher\games',
-        }
-        return directories.get(company, "")
-
 if __name__ == "__main__":
     root = tk.Tk()
     app = GameLauncherApp(root)
-
-    # Hardcoded filter list is already defined in the class itself
 
     # Configure the style for buttons
     style = ttk.Style()
