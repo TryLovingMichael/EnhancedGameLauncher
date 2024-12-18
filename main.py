@@ -33,9 +33,9 @@ class GameLauncherApp:
         # Loop over each directory and look for game executables
         for company, directory in directories.items():
             games_list = self.find_games(directory)
+            self.create_company_button(company, directory)  # Create button regardless of directory existence
             if games_list:
                 self.games[company] = games_list
-                self.create_company_button(company)
 
     def find_games(self, directory):
         """Search for .exe files in the specified directory and return game names without .exe"""
@@ -57,11 +57,39 @@ class GameLauncherApp:
                 return True
         return False
 
-    def create_company_button(self, company):
+    def create_company_button(self, company, directory):
         """Create a button for each company with styling"""
-        button = ttk.Button(self.root, text=company, style="Company.TButton", command=lambda c=company: self.show_games(c))
+        button_style = "Company.TButton"
+        button_text = company
+        command = lambda c=company: self.show_games(c)
+
+        # If directory does not exist, make the button disabled and grayed out
+        if not os.path.exists(directory):
+            button_style = "DisabledCompany.TButton"
+            command = None  # Disable the button's functionality
+            button_text += " (Not Detected)"
+        
+        button = ttk.Button(self.root, text=button_text, style=button_style, command=command)
         button.pack(pady=10, fill="x", padx=50)
         self.buttons[company] = button
+
+        # Add a tooltip for grayed-out buttons
+        if not os.path.exists(directory):
+            self.create_tooltip(button, "Not Detected, Error? Report to the developer")
+
+    def create_tooltip(self, widget, text):
+        """Create a tooltip for a given widget"""
+        tooltip = ttk.Label(self.root, text=text, relief="solid", background="lightyellow", borderwidth=1, anchor="w")
+        tooltip.place_forget()  # Hide it initially
+        
+        def on_enter(event):
+            tooltip.place(x=event.x_root + 10, y=event.y_root + 10)  # Position near the widget
+
+        def on_leave(event):
+            tooltip.place_forget()  # Hide tooltip when mouse leaves the widget
+        
+        widget.bind("<Enter>", on_enter)
+        widget.bind("<Leave>", on_leave)
 
     def show_games(self, company):
         """Display the games of the selected company in a new window with scroll functionality"""
@@ -139,6 +167,7 @@ if __name__ == "__main__":
     # Configure the style for buttons
     style = ttk.Style()
     style.configure("Company.TButton", font=("Arial", 14), padding=10, relief="flat", background="#4CAF50", foreground="white")
+    style.configure("DisabledCompany.TButton", font=("Arial", 14), padding=10, relief="flat", background="#d3d3d3", foreground="gray")
     style.configure("Game.TButton", font=("Arial", 12), padding=8, relief="flat", background="#2196F3", foreground="white")
     style.map("Company.TButton", background=[('active', '#45a049')], foreground=[('active', 'black')])
     style.map("Game.TButton", background=[('active', '#1E88E5')], foreground=[('active', 'black')])
