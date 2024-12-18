@@ -6,10 +6,12 @@ from threading import Thread
 
 SETTINGS_FILE = "game_launcher_settings.json"
 
+
 class GameLauncher:
     def __init__(self, root):
         self.root = root
         self.root.title("Enhanced Game Launcher")
+        self.root.geometry("600x500")
         self.games = {}  # Dictionary to store game names and paths
         self.main_game_folder = None  # User-selected main game folder
 
@@ -24,11 +26,12 @@ class GameLauncher:
         self.style = ttk.Style(self.root)
         self.style.theme_use("clam")
 
-        # Listbox with scrollbar
+        # Frame for game list
         frame = ttk.Frame(self.root)
-        frame.pack(pady=10)
+        frame.pack(pady=10, fill=tk.BOTH, expand=True)
 
-        self.listbox = tk.Listbox(frame, width=50, height=15)
+        # Game listbox with scrollbar
+        self.listbox = tk.Listbox(frame, width=50, height=15, selectmode=tk.SINGLE)
         self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=self.listbox.yview)
@@ -38,25 +41,35 @@ class GameLauncher:
 
         # Buttons
         self.button_frame = ttk.Frame(self.root)
-        self.button_frame.pack(pady=5)
+        self.button_frame.pack(pady=10)
 
-        self.add_button = ttk.Button(self.button_frame, text="Add Game", command=self.add_game)
-        self.add_button.grid(row=0, column=0, padx=5)
+        self.add_button = ttk.Button(self.button_frame, text="Add Game", command=self.add_game, width=15)
+        self.add_button.grid(row=0, column=0, padx=5, pady=5)
 
-        self.launch_button = ttk.Button(self.button_frame, text="Launch Game", command=self.launch_game)
-        self.launch_button.grid(row=0, column=1, padx=5)
+        self.launch_button = ttk.Button(self.button_frame, text="Launch Game", command=self.launch_game, width=15)
+        self.launch_button.grid(row=0, column=1, padx=5, pady=5)
 
-        self.remove_button = ttk.Button(self.button_frame, text="Remove Game", command=self.remove_game)
-        self.remove_button.grid(row=0, column=2, padx=5)
+        self.remove_button = ttk.Button(self.button_frame, text="Remove Game", command=self.remove_game, width=15)
+        self.remove_button.grid(row=0, column=2, padx=5, pady=5)
 
-        self.auto_search_button = ttk.Button(self.button_frame, text="Auto Search", command=self.auto_search)
-        self.auto_search_button.grid(row=0, column=3, padx=5)
+        self.auto_search_button = ttk.Button(self.button_frame, text="Auto Search", command=self.auto_search, width=15)
+        self.auto_search_button.grid(row=1, column=0, padx=5, pady=5)
 
-        self.set_folder_button = ttk.Button(self.button_frame, text="Set Main Game Folder", command=self.set_main_folder)
-        self.set_folder_button.grid(row=0, column=4, padx=5)
+        self.set_folder_button = ttk.Button(self.button_frame, text="Set Main Game Folder", command=self.set_main_folder, width=15)
+        self.set_folder_button.grid(row=1, column=1, padx=5, pady=5)
 
+        self.exit_button = ttk.Button(self.button_frame, text="Exit", command=self.root.quit, width=15)
+        self.exit_button.grid(row=1, column=2, padx=5, pady=5)
+
+        # Progress bar
+        self.progress_var = tk.DoubleVar()
+        self.progress_bar = ttk.Progressbar(self.root, orient="horizontal", length=400, mode="determinate",
+                                            variable=self.progress_var)
+        self.progress_bar.pack(pady=10)
+
+        # Status label
         self.status_label = ttk.Label(self.root, text="Welcome to Enhanced Game Launcher", anchor="center")
-        self.status_label.pack(pady=5)
+        self.status_label.pack(pady=10)
 
     def add_game(self):
         file_path = filedialog.askopenfilename(title="Select Game Executable",
@@ -103,35 +116,43 @@ class GameLauncher:
 
     def auto_search(self):
         self.status_label.config(text="Searching for games... This may take a while.")
+        self.progress_var.set(0)  # Reset progress bar
         Thread(target=self._search_for_games, daemon=True).start()
 
-    def _search_for_games(self):
-        # Common directories to search
-        search_dirs = [
-            os.path.expanduser("~\\Desktop"),  # User's desktop
-            "C:\\Program Files (x86)\\Steam\\steamapps\\common",  # Steam
-            "C:\\Program Files (x86)\\GOG Galaxy\\Games",  # GOG
-            "C:\\Program Files\\Epic Games",  # Epic Games
-            "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\games",  # Ubisoft Connect
-            "D:\\Games",  # Example custom directory
-            "E:\\Games"  # Example for an additional hard drive
-        ]
+def _search_for_games(self):
+    # Restrict search to common game installation directories
+    search_dirs = [
+        "C:\\Program Files (x86)\\Steam\\steamapps\\common",  # Steam
+        "C:\\Program Files (x86)\\GOG Galaxy\\Games",  # GOG
+        "C:\\Program Files\\Epic Games",  # Epic Games
+        "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\games",  # Ubisoft Connect
+        "D:\\Games",  # Custom directories
+        "E:\\Games"
+    ]
 
-        # Add user-selected main folder to the search
-        if self.main_game_folder:
-            search_dirs.append(self.main_game_folder)
+    # Include the user-defined folder if set
+    if self.main_game_folder:
+        search_dirs.append(self.main_game_folder)
 
-        found_games = {}
-        for directory in search_dirs:
-            if os.path.exists(directory):  # Check if directory exists
-                for root, dirs, files in os.walk(directory):
-                    for file in files:
-                        if file.endswith(".exe"):  # Adjust for your platform
-                            game_name = os.path.basename(file)
-                            found_games[game_name] = os.path.join(root, file)
+    found_games = {}
+    total_dirs = len(search_dirs)
 
-        # Update UI with results
-        self.root.after(0, self._update_game_list, found_games)
+    for i, directory in enumerate(search_dirs, start=1):
+        if os.path.exists(directory):
+            for root, dirs, files in os.walk(directory):
+                for file in files:
+                    # Only include `.exe` files in relevant paths
+                    if file.endswith(".exe") and any(keyword in root.lower() for keyword in ["steamapps", "gog", "epic", "ubisoft", "games"]):
+                        game_name = os.path.basename(file)
+                        found_games[game_name] = os.path.join(root, file)
+
+        # Update progress bar
+        progress = (i / total_dirs) * 100
+        self.root.after(0, self.progress_var.set, progress)
+
+    # Update the game list in the UI
+    self.root.after(0, self._update_game_list, found_games)
+
 
     def _update_game_list(self, found_games):
         if found_games:
@@ -163,6 +184,7 @@ class GameLauncher:
                 json.dump(settings, file, indent=4)
         except Exception as e:
             print(f"Error saving settings: {e}")
+
 
 if __name__ == "__main__":
     root = tk.Tk()
